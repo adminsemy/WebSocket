@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>WebSockets Echo</title>
+    </head>
+
+    <body>
+        <div>
+        <h1>Amazing WebSockets Echo</h1>
+        <h3 id="chat-header">Currently in chat: geneal</h3>
+        <form action="GET" id="chat-selection">
+            <label for="chat-selection">Chatroom</label>
+            <input type="text" id="chat-room" name="chat-room"><br><br>
+            <input type="submit" value="Change chatroom">
+        </form>
+        <br>
+        <textarea class="messagearea" name="chatmessages"
+            readonly id="chat-messages" cols="30" rows="10" placeholder="Welcome to the chatroom"></textarea>
+        </div>
+        <br>
+        <form action="POST" id="chat-messange">
+            <label for="chat-messange">Message</label>
+            <input type="text" id="message" name="message">
+            <input type="submit" value="Send">
+        </form>
+
+
+        
+    </body>
+</html>

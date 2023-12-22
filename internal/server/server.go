@@ -9,7 +9,7 @@ import (
 )
 
 func Run(ctx context.Context, logger *zap.Logger) {
-	webSocketUpgrader := handler.Manager{}
+	webSocketUpgrader := handler.NewManager()
 
 	http.Handle("/", http.FileServer(http.Dir("./web")))
 	http.HandleFunc("/ws", webSocketUpgrader.ServeWS)

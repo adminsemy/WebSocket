@@ -25,7 +25,7 @@
         </div>
         <script>
             var selectedChat = "geneal";
-
+            var ws = new WebSocket("ws://"+document.location.host+"/ws")
             function changeChatRoom() {
                 var newChat = document.getElementById("chat-room")
                 if (newChat.value != selectedChat && newChat.value != "") {
@@ -36,7 +36,8 @@
             function sendMessage() {
                 var message = document.getElementById("message")
                 if (message != null && message.value != "") {
-                    console.log(message.value)                    
+                    ws.send(message.value)
+                    document.getElementById("message").value = ""
                 }
                 return false
             }
@@ -45,7 +46,7 @@
                 document.getElementById("chat-selection").onsubmit = changeChatRoom
                 document.getElementById("chat-messange").onsubmit = sendMessage
             }
-            var ws = new WebSocket("ws://"+document.location.host+"/ws")
+            
         </script>
         <style type="text/css">
             body {

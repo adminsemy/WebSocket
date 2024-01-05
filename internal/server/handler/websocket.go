@@ -53,8 +53,9 @@ func (m *Manager) RemoveClient() {
 	for {
 		client = <-m.delete
 		m.Lock()
-		m.clients[client] = true
+		delete(m.clients, client)
 		m.Unlock()
+		slog.Info("Client removed", "client", *client)
 	}
 }
 
@@ -62,6 +63,7 @@ func (m *Manager) WriteMessageToAll() {
 	for {
 		message := <-m.messageCh
 		m.RLock()
+		slog.Info("Writing message to all clients", "clients", m.clients)
 		for client := range m.clients {
 			client.WriteChan <- message
 		}

@@ -10,13 +10,17 @@ import (
 )
 
 type Manager struct {
-	clients map[*client.WebSocketClient]bool
+	clients   map[*client.WebSocketClient]bool
+	delete    chan *client.WebSocketClient
+	messageCh chan []byte
 	sync.RWMutex
 }
 
 func NewManager() *Manager {
 	return &Manager{
-		clients: make(map[*client.WebSocketClient]bool),
+		clients:   make(map[*client.WebSocketClient]bool),
+		delete:    make(chan *client.WebSocketClient),
+		messageCh: make(chan []byte),
 	}
 }
 
@@ -32,7 +36,10 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 	client := client.NewWebSocketClient(conn)
 	m.AddClient(client)
-	go client.ReadMessages()
+	go client.ReadMessages(m.delete, m.messageCh)
+	go client.WriteMessage(m.delete)
+	go m.RemoveClient()
+	go m.WriteMessageToAll()
 }
 
 func (m *Manager) AddClient(client *client.WebSocketClient) {
@@ -41,8 +48,23 @@ func (m *Manager) AddClient(client *client.WebSocketClient) {
 	m.Unlock()
 }
 
-func (m *Manager) RemoveClient(client *client.WebSocketClient) {
-	m.Lock()
-	delete(m.clients, client)
-	m.Unlock()
+func (m *Manager) RemoveClient() {
+	var client *client.WebSocketClient
+	for {
+		client = <-m.delete
+		m.Lock()
+		m.clients[client] = true
+		m.Unlock()
+	}
+}
+
+func (m *Manager) WriteMessageToAll() {
+	for {
+		message := <-m.messageCh
+		m.RLock()
+		for client := range m.clients {
+			client.WriteChan <- message
+		}
+		m.RUnlock()
+	}
 }

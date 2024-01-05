@@ -25,6 +25,27 @@
         </div>
         <script>
             var selectedChat = "geneal";
+            class Event {
+                constructor(type, payload) {
+                    this.type = type
+                    this.payload = payload                    
+                }
+            }
+            function routeEvent(event) {
+                switch (event.type) {
+                    case "new_message":
+                        console.log(event.payload)
+                        break
+                    default:
+                    console.log("Unknown event: " + event.type)
+                }
+            }
+
+            function sendEvent(eventName, payload) {
+                const event = new Event(eventName, payload)
+                ws.send(JSON.stringify(event))
+            }
+
             var ws = new WebSocket("ws://"+document.location.host+"/ws")
             function changeChatRoom() {
                 var newChat = document.getElementById("chat-room")
@@ -36,7 +57,7 @@
             function sendMessage() {
                 var message = document.getElementById("message")
                 if (message != null && message.value != "") {
-                    ws.send(message.value)
+                    sendEvent("send_message", message.value)
                     document.getElementById("message").value = ""
                 }
                 return false

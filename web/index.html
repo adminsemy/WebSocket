@@ -17,8 +17,8 @@
         <textarea class="messagearea" name="chatmessages"
             readonly id="chat-messages" cols="30" rows="10" placeholder="Welcome to the chatroom"></textarea>
             <br>
-            <form action="POST" id="chat-messange">
-                <label for="chat-messange">Message</label>
+            <form action="POST" id="chat-message">
+                <label for="chat-message">Message</label>
                 <input type="text" id="message" name="message">
                 <input type="submit" value="Send">
             </form>
@@ -47,6 +47,11 @@
             }
 
             var ws = new WebSocket("ws://"+document.location.host+"/ws")
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data)
+                const newEvent = Object.assign(new Event(), data)
+                routeEvent(newEvent)
+            }
             function changeChatRoom() {
                 var newChat = document.getElementById("chat-room")
                 if (newChat.value != selectedChat && newChat.value != "") {
@@ -65,7 +70,7 @@
 
             window.onload = function() {
                 document.getElementById("chat-selection").onsubmit = changeChatRoom
-                document.getElementById("chat-messange").onsubmit = sendMessage
+                document.getElementById("chat-message").onsubmit = sendMessage
             }
             
         </script>

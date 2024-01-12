@@ -2,8 +2,14 @@ package client
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/gorilla/websocket"
+)
+
+var (
+	pongWait   = 10 * time.Second
+	pingPeriod = (pongWait * 9) / 10
 )
 
 type WebSocketClient struct {
@@ -13,17 +19,17 @@ type WebSocketClient struct {
 }
 
 func NewWebSocketClient(connection *websocket.Conn) *WebSocketClient {
-	return &WebSocketClient{
+	w := &WebSocketClient{
 		connection: connection,
 		readChan:   make(chan []byte),
 		WriteChan:  make(chan []byte),
 	}
+
+	return w
 }
 
 func (c *WebSocketClient) ReadMessages(delete chan *WebSocketClient, message chan []byte) {
-	defer func() {
-		delete <- c
-	}()
+	c.connection.SetPongHandler(c.pongHandler)
 	for {
 		messageType, payload, err := c.connection.ReadMessage()
 		if err != nil {
@@ -43,6 +49,7 @@ func (c *WebSocketClient) WriteMessage(delete chan *WebSocketClient) {
 	defer func() {
 		delete <- c
 	}()
+	ticker := time.NewTicker(pingPeriod)
 	var message []byte
 	var ok bool
 	for {
@@ -58,6 +65,17 @@ func (c *WebSocketClient) WriteMessage(delete chan *WebSocketClient) {
 				slog.Error("error writing message: ", "error", err)
 			}
 			slog.Info("Message sent: ", "message", string(message))
+		case <-ticker.C:
+			if err := c.connection.WriteMessage(websocket.PingMessage, nil); err != nil {
+				slog.Error("error writing ping message: ", "error", err)
+				return
+			}
+
 		}
 	}
+}
+
+func (w *WebSocketClient) pongHandler(pongMessage string) error {
+	slog.Info("Pong received: ", "message", pongMessage)
+	return w.connection.SetReadDeadline(time.Now().Add(pongWait))
 }

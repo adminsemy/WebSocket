@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -27,7 +28,7 @@ func NewManager() *Manager {
 		messageCh: make(chan []byte),
 		handlers:  make(map[string]event.EventHandler),
 	}
-
+	go m.WriteMessageToAll()
 	return m
 }
 
@@ -63,7 +64,6 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	go client.ReadMessages(m.delete, m.messageCh)
 	go client.WriteMessage(m.delete)
 	go m.RemoveClient()
-	go m.WriteMessageToAll()
 }
 
 func (m *Manager) AddClient(client *client.WebSocketClient) {
@@ -86,11 +86,41 @@ func (m *Manager) RemoveClient() {
 func (m *Manager) WriteMessageToAll() {
 	for {
 		message := <-m.messageCh
+		event, err := m.toReadMessage(message)
+		if err != nil {
+			slog.Error("Failed to parse message", "error", err)
+			continue
+		}
+		sendMessage, err := m.toSendMessage(event)
+		if err != nil {
+			slog.Error("Failed to parse message", "error", err)
+			continue
+		}
 		m.RLock()
-		slog.Info("Writing message to all clients", "clients", m.clients)
+		slog.Info("Writing message to all clients", "clients", m.clients, "message", string(sendMessage))
 		for client := range m.clients {
-			client.WriteChan <- message
+			client.WriteChan <- sendMessage
 		}
 		m.RUnlock()
 	}
+}
+
+func (m *Manager) toReadMessage(data []byte) (event.Event, error) {
+	var e event.Event
+	if err := json.Unmarshal(data, &e); err != nil {
+		return e, err
+	}
+	return e, nil
+}
+
+func (m *Manager) toSendMessage(e event.Event) ([]byte, error) {
+	sendMessage := event.SendMessageEvent{
+		Message: string(e.Payload),
+		From:    "Server",
+	}
+	b, err := json.Marshal(sendMessage)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }

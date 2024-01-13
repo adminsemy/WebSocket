@@ -31,6 +31,7 @@ func NewWebSocketClient(connection *websocket.Conn) *WebSocketClient {
 func (c *WebSocketClient) ReadMessages(delete chan *WebSocketClient, message chan []byte) {
 	c.connection.SetPongHandler(c.pongHandler)
 	for {
+		c.connection.SetReadLimit(512)
 		messageType, payload, err := c.connection.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {

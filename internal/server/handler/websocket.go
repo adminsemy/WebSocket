@@ -1,15 +1,18 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/adminsemy/WebSocket/internal/client"
 	"github.com/adminsemy/WebSocket/internal/client/event"
+	"github.com/adminsemy/WebSocket/internal/client/oneTimePassword"
 	"github.com/gorilla/websocket"
 )
 
@@ -19,14 +22,16 @@ type Manager struct {
 	messageCh chan []byte
 	sync.RWMutex
 	handlers map[string]event.EventHandler
+	opts     oneTimePassword.RetentionMap
 }
 
-func NewManager() *Manager {
+func NewManager(ctx context.Context) *Manager {
 	m := &Manager{
 		clients:   make(map[*client.WebSocketClient]bool),
 		delete:    make(chan *client.WebSocketClient),
 		messageCh: make(chan []byte),
 		handlers:  make(map[string]event.EventHandler),
+		opts:      oneTimePassword.NewRetentionMap(context.Background(), 5*time.Minute),
 	}
 	go m.WriteMessageToAll()
 	return m
@@ -49,7 +54,56 @@ func (m *Manager) routeEvent(e event.Event, c *client.WebSocketClient) error {
 	return errors.New("event handler not found")
 }
 
+func (m *Manager) Login(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Serving Login request")
+	type LoginRequest struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	var user LoginRequest
+
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		slog.Error("Failed to parse login request", "error", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if user.Username == "admin" && user.Password == "admin" {
+		type response struct {
+			OTP string `json:"otp"`
+		}
+
+		otp := m.opts.NewOTP()
+
+		resp := response{
+			OTP: otp.OneTimePassword,
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			slog.Error("Failed to marshal response", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+
+	w.WriteHeader(http.StatusUnauthorized)
+}
+
 func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
+	otp := r.URL.Query().Get("otp")
+	if otp == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if !m.opts.Verify(otp) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	slog.Info("Serving Websocket request")
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,

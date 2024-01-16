@@ -12,6 +12,11 @@ var (
 	pingPeriod = (pongWait * 9) / 10
 )
 
+type Message struct {
+	Payload []byte
+	Client  *WebSocketClient
+}
+
 type WebSocketClient struct {
 	connection *websocket.Conn
 	readChan   chan []byte
@@ -28,8 +33,11 @@ func NewWebSocketClient(connection *websocket.Conn) *WebSocketClient {
 	return w
 }
 
-func (c *WebSocketClient) ReadMessages(delete chan *WebSocketClient, message chan []byte) {
+func (c *WebSocketClient) ReadMessages(delete chan *WebSocketClient, m chan Message) {
 	c.connection.SetPongHandler(c.pongHandler)
+	newMessage := Message{
+		Client: c,
+	}
 	for {
 		c.connection.SetReadLimit(512)
 		messageType, payload, err := c.connection.ReadMessage()
@@ -41,7 +49,8 @@ func (c *WebSocketClient) ReadMessages(delete chan *WebSocketClient, message cha
 		}
 		slog.Info("Message Type: ", "type", messageType)
 		slog.Info("Payload: ", "message", string(payload))
-		message <- payload
+		newMessage.Payload = payload
+		m <- newMessage
 		slog.Info("Send payload to channel: ", "message", string(payload))
 	}
 }

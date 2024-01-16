@@ -19,7 +19,7 @@ import (
 type Manager struct {
 	clients   map[*client.WebSocketClient]bool
 	delete    chan *client.WebSocketClient
-	messageCh chan []byte
+	messageCh chan client.Message
 	sync.RWMutex
 	handlers map[string]event.EventHandler
 	opts     oneTimePassword.RetentionMap
@@ -29,10 +29,11 @@ func NewManager(ctx context.Context) *Manager {
 	m := &Manager{
 		clients:   make(map[*client.WebSocketClient]bool),
 		delete:    make(chan *client.WebSocketClient),
-		messageCh: make(chan []byte),
+		messageCh: make(chan client.Message),
 		handlers:  make(map[string]event.EventHandler),
 		opts:      oneTimePassword.NewRetentionMap(context.Background(), 5*time.Minute),
 	}
+	m.SetupHandlers()
 	go m.WriteMessageToAll()
 	return m
 }
@@ -141,7 +142,7 @@ func (m *Manager) RemoveClient() {
 func (m *Manager) WriteMessageToAll() {
 	for {
 		message := <-m.messageCh
-		event, err := m.toReadMessage(message)
+		event, err := m.toReadMessage(message.Payload)
 		if err != nil {
 			slog.Error("Failed to parse message", "error", err)
 			continue

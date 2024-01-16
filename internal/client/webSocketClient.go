@@ -21,6 +21,7 @@ type WebSocketClient struct {
 	connection *websocket.Conn
 	readChan   chan []byte
 	WriteChan  chan []byte
+	Chatroom   string
 }
 
 func NewWebSocketClient(connection *websocket.Conn) *WebSocketClient {
@@ -33,9 +34,9 @@ func NewWebSocketClient(connection *websocket.Conn) *WebSocketClient {
 	return w
 }
 
-func (c *WebSocketClient) ReadMessages(delete chan *WebSocketClient, m chan Message) {
+func (c *WebSocketClient) ReadMessages(delete chan *WebSocketClient, m chan *Message) {
 	c.connection.SetPongHandler(c.pongHandler)
-	newMessage := Message{
+	newMessage := &Message{
 		Client: c,
 	}
 	for {

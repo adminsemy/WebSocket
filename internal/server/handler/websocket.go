@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -19,7 +18,7 @@ import (
 type Manager struct {
 	clients   map[*client.WebSocketClient]bool
 	delete    chan *client.WebSocketClient
-	messageCh chan client.Message
+	messageCh chan *client.Message
 	sync.RWMutex
 	handlers map[string]event.EventHandler
 	opts     oneTimePassword.RetentionMap
@@ -29,18 +28,31 @@ func NewManager(ctx context.Context) *Manager {
 	m := &Manager{
 		clients:   make(map[*client.WebSocketClient]bool),
 		delete:    make(chan *client.WebSocketClient),
-		messageCh: make(chan client.Message),
+		messageCh: make(chan *client.Message),
 		handlers:  make(map[string]event.EventHandler),
 		opts:      oneTimePassword.NewRetentionMap(context.Background(), 5*time.Minute),
 	}
 	m.SetupHandlers()
-	go m.WriteMessageToAll()
+	go m.ReadMessage()
 	return m
 }
 
 func (m *Manager) SetupHandlers() {
 	m.handlers[event.EventSendMessage] = func(e *event.Event, c *client.WebSocketClient) error {
-		fmt.Println(e)
+		sendMessage := event.SendMessageEvent{
+			Message: string(e.Payload),
+			From:    "Server",
+		}
+		data, err := json.Marshal(sendMessage)
+		if err != nil {
+			return err
+		}
+		m.RLock()
+		slog.Info("Writing message to all clients", "clients", m.clients, "message", string(data))
+		for client := range m.clients {
+			client.WriteChan <- data
+		}
+		m.RUnlock()
 		return nil
 	}
 }
@@ -139,7 +151,7 @@ func (m *Manager) RemoveClient() {
 	}
 }
 
-func (m *Manager) WriteMessageToAll() {
+func (m *Manager) ReadMessage() {
 	for {
 		message := <-m.messageCh
 		event, err := m.toReadMessage(message.Payload)
@@ -147,17 +159,12 @@ func (m *Manager) WriteMessageToAll() {
 			slog.Error("Failed to parse message", "error", err)
 			continue
 		}
-		sendMessage, err := m.toSendMessage(event)
+		err = m.routeEvent(event, message.Client)
 		if err != nil {
-			slog.Error("Failed to parse message", "error", err)
+			slog.Error("Failed to route message", "error", err)
 			continue
 		}
-		m.RLock()
-		slog.Info("Writing message to all clients", "clients", m.clients, "message", string(sendMessage))
-		for client := range m.clients {
-			client.WriteChan <- sendMessage
-		}
-		m.RUnlock()
+
 	}
 }
 
@@ -167,16 +174,4 @@ func (m *Manager) toReadMessage(data []byte) (event.Event, error) {
 		return e, err
 	}
 	return e, nil
-}
-
-func (m *Manager) toSendMessage(e event.Event) ([]byte, error) {
-	sendMessage := event.SendMessageEvent{
-		Message: string(e.Payload),
-		From:    "Server",
-	}
-	b, err := json.Marshal(sendMessage)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
 }

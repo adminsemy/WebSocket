@@ -95,6 +95,7 @@ func (m *Manager) Login(w http.ResponseWriter, r *http.Request) {
 
 func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	otp := r.URL.Query().Get("otp")
+	slog.Info("Serving Websocket otp", "otp", otp)
 	if otp == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return

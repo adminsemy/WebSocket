@@ -36,6 +36,8 @@
         </div>
         <script>
             var selectedChat = "geneal";
+            var ws
+            var event
             class Event {
                 constructor(type, payload) {
                     this.type = type
@@ -53,12 +55,12 @@
             }
 
             function sendEvent(eventName, payload) {
-                const event = new Event(eventName, payload)
+                event = new Event(eventName, payload)
                 ws.send(JSON.stringify(event))
             }
 
             function connectWebSocket(otp) {
-                var ws = new WebSocket("ws://"+document.location.host+"/ws?otp= " + otp)
+                ws = new WebSocket("ws://"+document.location.host+"/ws?otp=" + otp)
 
                 ws.onopen = function(event) {
                     document.getElementById("connection-header").innerHTML = "Connected"
@@ -75,8 +77,7 @@
             }
             function changeChatRoom() {
                 var newChat = document.getElementById("chat-room")
-                if (newChat.value != selectedChat && newChat.value != "") {
-                    console.log("new chat")                    
+                if (newChat.value != selectedChat && newChat.value != "") {            
                 }
                 return false
             }
@@ -106,8 +107,7 @@
                         throw new Error("Network response was not ok.");
                     }
                 }).then((data) => {
-                    if (data.status == "success") {
-                     }
+                        connectWebSocket(data.otp)
                 }).catch((error) => {
                     console.error("Error:", error);
                 });

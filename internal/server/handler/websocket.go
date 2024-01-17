@@ -39,11 +39,17 @@ func NewManager(ctx context.Context) *Manager {
 
 func (m *Manager) SetupHandlers() {
 	m.handlers[event.EventSendMessage] = func(e *event.Event, c *client.WebSocketClient) error {
-		sendMessage := event.SendMessageEvent{
-			Message: string(e.Payload),
-			From:    "Server",
+		var sendMessage event.SendMessageEvent
+
+		err := json.Unmarshal(e.Payload, &sendMessage)
+		if err != nil {
+			return err
 		}
-		data, err := json.Marshal(sendMessage)
+		newMessage := event.NewSendMessage{
+			SendMessageEvent: sendMessage,
+			Send:             time.Now(),
+		}
+		data, err := json.Marshal(newMessage)
 		if err != nil {
 			return err
 		}

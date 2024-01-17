@@ -21,7 +21,7 @@ type WebSocketClient struct {
 	connection *websocket.Conn
 	readChan   chan []byte
 	WriteChan  chan []byte
-	Chatroom   string
+	ChatRoom   string
 }
 
 func NewWebSocketClient(connection *websocket.Conn) *WebSocketClient {

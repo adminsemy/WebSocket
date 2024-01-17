@@ -36,22 +36,51 @@
         </div>
         <script>
             var selectedChat = "geneal";
-        
-            var event
-            class Event {
+           class Event {
                 constructor(type, payload) {
                     this.type = type
                     this.payload = payload                    
                 }
             }
+
+            class SendMessageEvent {
+                constructor(message, from) {
+                    this.message = message;
+                    this.from = from;
+                }
+            }
+
+            class NewMessageEvent {
+                constructor(message, from, sent) {
+                    this.message = message;
+                    this.from = from;
+                    this.sent = sent;                    
+                }
+            }
+
+            class ChangeChatRoomEvent {
+                constructor(name) {
+                    this.name = name
+                }
+            }
+
             function routeEvent(event) {
                 switch (event.type) {
                     case "new_message":
-                        console.log(event.payload)
+                        const messageEvent = Object.assign(new NewMessageEvent(), event.payload)
+                        appendChatMessage(messageEvent)
                         break
                     default:
                     console.log("Unknown event: " + event.type)
                 }
+            }
+
+            function appendChatMessage(messageEvent) {
+                var date = new Date(messageEvent.sent)
+                const formattedMsg  =  `${date.toLocaleString}: ${messageEvent.message}`
+                textarea = document.getElementById("chat-messages")
+                textarea.innerHTML = textarea.innerHTML + "\n" + formattedMsg
+                textarea.scrollTop = textarea.scrollHeight
             }
 
             function sendEvent(eventName, payload) {
@@ -77,14 +106,21 @@
             }
             function changeChatRoom() {
                 var newChat = document.getElementById("chat-room")
-                if (newChat.value != selectedChat && newChat.value != "") {            
+                if (newChat.value != null && newChat.value != "" && newChat.value != selectedChat) {
+                    selectedChat = newChat.value
+                    header = document.getElementById("chat-header").innerHTML = "Currently in chat: " + selectedChat
+                    let changeEvent = new ChangeChatRoomEvent(selectedChat)
+                    sendEvent("change_chat_room", changeEvent)
+                    textarea = document.getElementById("chat-messages")
+                    textarea.innerHTML = "You changed room into: " + selectedChat
                 }
                 return false
             }
             function sendMessage() {
                 var message = document.getElementById("message")
                 if (message != null && message.value != "") {
-                    sendEvent("send_message", message.value)
+                    let outgoingEvent = new SendMessageEvent(message.value, "geneal")
+                    sendEvent("send_message", outgoingEvent)
                     document.getElementById("message").value = ""
                 }
                 return false

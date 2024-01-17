@@ -7,7 +7,10 @@ import (
 	"github.com/adminsemy/WebSocket/internal/client"
 )
 
-var EventSendMessage = "send_message"
+var (
+	EventSendMessage = "send_message"
+	ChangeChatRoom   = "change_chat_room"
+)
 
 type Event struct {
 	Type    string          `json:"type"`
@@ -24,4 +27,8 @@ type SendMessageEvent struct {
 type NewSendMessage struct {
 	SendMessageEvent
 	Send time.Time `json:"send"`
+}
+
+type ChangeChatRoomEvent struct {
+	Name string `json: "name"`
 }

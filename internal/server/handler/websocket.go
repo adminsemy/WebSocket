@@ -61,6 +61,14 @@ func (m *Manager) SetupHandlers() {
 		m.RUnlock()
 		return nil
 	}
+	m.handlers[event.ChangeChatRoom] = func(e *event.Event, c *client.WebSocketClient) error {
+		var chatRoomEvent event.ChangeChatRoomEvent
+		if err := json.Unmarshal(e.Payload, &chatRoomEvent); err != nil {
+			return err
+		}
+		c.ChatRoom = chatRoomEvent.Name
+		return nil
+	}
 }
 
 func (m *Manager) routeEvent(e event.Event, c *client.WebSocketClient) error {

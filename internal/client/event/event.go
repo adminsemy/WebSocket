@@ -9,6 +9,7 @@ import (
 
 var (
 	EventSendMessage = "send_message"
+	EvenNewMessage   = "new_message"
 	ChangeChatRoom   = "change_chat_room"
 )
 
@@ -30,5 +31,5 @@ type NewSendMessage struct {
 }
 
 type ChangeChatRoomEvent struct {
-	Name string `json: "name"`
+	Name string `json:"name"`
 }

@@ -53,10 +53,20 @@ func (m *Manager) SetupHandlers() {
 		if err != nil {
 			return err
 		}
+		event := event.Event{
+			Type:    event.EvenNewMessage,
+			Payload: data,
+		}
+		data, err = json.Marshal(event)
+		if err != nil {
+			return err
+		}
 		m.RLock()
 		slog.Info("Writing message to all clients", "clients", m.clients, "message", string(data))
 		for client := range m.clients {
-			client.WriteChan <- data
+			if c.ChatRoom == client.ChatRoom {
+				client.WriteChan <- data
+			}
 		}
 		m.RUnlock()
 		return nil

@@ -47,7 +47,7 @@ func (m *Manager) SetupHandlers() {
 		}
 		newMessage := event.NewSendMessage{
 			SendMessageEvent: sendMessage,
-			Send:             time.Now(),
+			Sent:             time.Now(),
 		}
 		data, err := json.Marshal(newMessage)
 		if err != nil {

@@ -27,7 +27,7 @@ type SendMessageEvent struct {
 
 type NewSendMessage struct {
 	SendMessageEvent
-	Send time.Time `json:"send"`
+	Sent time.Time `json:"sent"`
 }
 
 type ChangeChatRoomEvent struct {

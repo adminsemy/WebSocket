@@ -77,7 +77,7 @@
 
             function appendChatMessage(messageEvent) {
                 var date = new Date(messageEvent.sent)
-                const formattedMsg  =  `${date.toLocaleString}: ${messageEvent.message}`
+                const formattedMsg  =  `${date.toLocaleString()}: ${messageEvent.message}`
                 textarea = document.getElementById("chat-messages")
                 textarea.innerHTML = textarea.innerHTML + "\n" + formattedMsg
                 textarea.scrollTop = textarea.scrollHeight
